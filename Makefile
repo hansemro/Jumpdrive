@@ -1,5 +1,7 @@
-CROSS_FLAGS = ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
-CROSS_FLAGS_BOOT = CROSS_COMPILE=aarch64-linux-gnu-
+ARM64_CROSS_FLAGS = ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+ARM64_CROSS_FLAGS_BOOT = CROSS_COMPILE=aarch64-linux-gnu-
+ARM_CROSS_FLAGS = ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabihf-
+ARM_CROSS_FLAGS_BOOT = CROSS_COMPILE=arm-none-linux-gnueabihf-
 
 all: pine64-pinephone.img.xz pine64-pinetab.img.xz purism-librem5.tar.xz boot-xiaomi-beryllium-tianma.img boot-xiaomi-beryllium-ebbg.img boot-oneplus-enchilada.img boot-oneplus-fajita.img
 
@@ -97,7 +99,7 @@ initramfs/bin/busybox: src/busybox src/busybox_config
 	@echo "MAKE  $@"
 	@mkdir -p build/busybox
 	@cp src/busybox_config build/busybox/.config
-	@$(MAKE) -C src/busybox O=../../build/busybox $(CROSS_FLAGS)
+	@$(MAKE) -C src/busybox O=../../build/busybox $(ARM64_CROSS_FLAGS)
 	@cp build/busybox/busybox initramfs/bin/busybox
 	
 splash/%.ppm.gz: splash/%.ppm
@@ -123,8 +125,8 @@ kernel-sunxi.gz: src/linux_config_sunxi src/linux-sunxi
 	@mkdir -p build/linux-sunxi
 	@mkdir -p dtbs/sunxi
 	@cp src/linux_config_sunxi build/linux-sunxi/.config
-	@$(MAKE) -C src/linux-sunxi O=../../build/linux-sunxi $(CROSS_FLAGS) olddefconfig
-	@$(MAKE) -C src/linux-sunxi O=../../build/linux-sunxi $(CROSS_FLAGS)
+	@$(MAKE) -C src/linux-sunxi O=../../build/linux-sunxi $(ARM64_CROSS_FLAGS) olddefconfig
+	@$(MAKE) -C src/linux-sunxi O=../../build/linux-sunxi $(ARM64_CROSS_FLAGS)
 	@cp build/linux-sunxi/arch/arm64/boot/Image.gz kernel-sunxi.gz
 	@cp build/linux-sunxi/arch/arm64/boot/dts/allwinner/*.dtb dtbs/sunxi/
 
@@ -137,8 +139,8 @@ kernel-rockchip.gz: src/linux_config_rockchip src/linux-rockchip
 	@mkdir -p build/linux-rockchip
 	@mkdir -p dtbs/rockchip
 	@cp src/linux_config_rockchip build/linux-rockchip/.config
-	@$(MAKE) -C src/linux-rockchip O=../../build/linux-rockchip $(CROSS_FLAGS) olddefconfig
-	@$(MAKE) -C src/linux-rockchip O=../../build/linux-rockchip $(CROSS_FLAGS)
+	@$(MAKE) -C src/linux-rockchip O=../../build/linux-rockchip $(ARM64_CROSS_FLAGS) olddefconfig
+	@$(MAKE) -C src/linux-rockchip O=../../build/linux-rockchip $(ARM64_CROSS_FLAGS)
 	@cp build/linux-rockchip/arch/arm64/boot/Image.gz $@
 	@cp build/linux-rockchip/arch/arm64/boot/dts/rockchip/*.dtb dtbs/rockchip/
 
@@ -147,8 +149,8 @@ kernel-librem5.gz: src/linux_config_librem5 src/linux-librem5
 	@mkdir -p build/linux-librem5
 	@mkdir -p dtbs/librem5
 	@cp src/linux_config_librem5 build/linux-librem5/.config
-	@$(MAKE) -C src/linux-librem5 O=../../build/linux-librem5 $(CROSS_FLAGS) olddefconfig
-	@$(MAKE) -C src/linux-librem5 O=../../build/linux-librem5 $(CROSS_FLAGS)
+	@$(MAKE) -C src/linux-librem5 O=../../build/linux-librem5 $(ARM64_CROSS_FLAGS) olddefconfig
+	@$(MAKE) -C src/linux-librem5 O=../../build/linux-librem5 $(ARM64_CROSS_FLAGS)
 	@cp build/linux-librem5/arch/arm64/boot/Image.gz $@
 	@cp build/linux-librem5/arch/arm64/boot/dts/freescale/imx8mq-librem5*.dtb dtbs/librem5/
 
@@ -158,9 +160,9 @@ kernel-sdm845.gz: src/linux-sdm845
 	@echo "MAKE  $@"
 	@mkdir -p build/linux-sdm845
 	@mkdir -p dtbs/sdm845
-	@$(MAKE) -C src/linux-sdm845 O=../../build/linux-sdm845 $(CROSS_FLAGS) defconfig sdm845.config
+	@$(MAKE) -C src/linux-sdm845 O=../../build/linux-sdm845 $(ARM64_CROSS_FLAGS) defconfig sdm845.config
 	@printf "CONFIG_USB_ETH=n" >> build/linux-sdm845/.config
-	@$(MAKE) -C src/linux-sdm845 O=../../build/linux-sdm845 $(CROSS_FLAGS)
+	@$(MAKE) -C src/linux-sdm845 O=../../build/linux-sdm845 $(ARM64_CROSS_FLAGS)
 	@cp build/linux-sdm845/arch/arm64/boot/Image.gz $@
 	@cp build/linux-sdm845/arch/arm64/boot/dts/qcom/sdm845-{xiaomi-beryllium-*,oneplus-enchilada,oneplus-fajita}.dtb dtbs/sdm845/
 
@@ -179,27 +181,27 @@ dtbs/sdm845/sdm845-oneplus-fajita.dtb: kernel-sdm845.gz
 build/atf/sun50i_a64/bl31.bin: src/arm-trusted-firmware
 	@echo "MAKE  $@"
 	@mkdir -p build/atf/sun50i_a64
-	@cd src/arm-trusted-firmware; make $(CROSS_FLAGS_BOOT) PLAT=sun50i_a64 bl31
+	@cd src/arm-trusted-firmware; make $(ARM64_CROSS_FLAGS_BOOT) PLAT=sun50i_a64 bl31
 	@cp src/arm-trusted-firmware/build/sun50i_a64/release/bl31.bin "$@"
 
 u-boot-sunxi-with-spl.bin: build/atf/sun50i_a64/bl31.bin src/u-boot
 	@echo "MAKE  $@"
 	@mkdir -p build/u-boot/sun50i_a64
-	@BL31=../../../build/atf/sun50i_a64/bl31.bin $(MAKE) -C src/u-boot O=../../build/u-boot/sun50i_a64 $(CROSS_FLAGS_BOOT) pinephone_defconfig
-	@BL31=../../../build/atf/sun50i_a64/bl31.bin $(MAKE) -C src/u-boot O=../../build/u-boot/sun50i_a64 $(CROSS_FLAGS_BOOT) ARCH=arm all
+	@BL31=../../../build/atf/sun50i_a64/bl31.bin $(MAKE) -C src/u-boot O=../../build/u-boot/sun50i_a64 $(ARM64_CROSS_FLAGS_BOOT) pinephone_defconfig
+	@BL31=../../../build/atf/sun50i_a64/bl31.bin $(MAKE) -C src/u-boot O=../../build/u-boot/sun50i_a64 $(ARM64_CROSS_FLAGS_BOOT) ARCH=arm all
 	@cp build/u-boot/sun50i_a64/u-boot-sunxi-with-spl.bin "$@"
 
 build/atf/rk3399/bl31.elf: src/arm-trusted-firmware
 	@echo "MAKE  $@"
 	@mkdir -p build/atf/rk3399
-	@cd src/arm-trusted-firmware; make $(CROSS_FLAGS_BOOT) PLAT=rk3399 bl31
+	@cd src/arm-trusted-firmware; make $(ARM64_CROSS_FLAGS_BOOT) PLAT=rk3399 bl31
 	@cp src/arm-trusted-firmware/build/sun50i_a64/release/bl31/bl31.elf "$@"
 
 u-boot-rk3399.bin: build/atf/rk3399/bl31.elf src/u-boot
 	@echo "MAKE  $@"
 	@mkdir -p build/u-boot/rk3399
-	@BL31=../../../build/atf/rk3399/bl31.elf $(MAKE) -C src/u-boot O=../../build/u-boot/rk3399 $(CROSS_FLAGS_BOOT) rockpro64-rk3399_defconfig
-	@BL31=../../../build/atf/rk3399/bl31.elf $(MAKE) -C src/u-boot O=../../build/u-boot/rk3399 $(CROSS_FLAGS_BOOT) all
+	@BL31=../../../build/atf/rk3399/bl31.elf $(MAKE) -C src/u-boot O=../../build/u-boot/rk3399 $(ARM64_CROSS_FLAGS_BOOT) rockpro64-rk3399_defconfig
+	@BL31=../../../build/atf/rk3399/bl31.elf $(MAKE) -C src/u-boot O=../../build/u-boot/rk3399 $(ARM64_CROSS_FLAGS_BOOT) all
 	@cp build/u-boot/rk3399/u-boot "$@"
 
 u-boot-librem5.bin: src/u-boot-librem5
