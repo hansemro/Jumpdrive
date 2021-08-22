@@ -3,7 +3,7 @@ ARM64_CROSS_FLAGS_BOOT = CROSS_COMPILE=aarch64-linux-gnu-
 ARM_CROSS_FLAGS = ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabihf-
 ARM_CROSS_FLAGS_BOOT = CROSS_COMPILE=arm-none-linux-gnueabihf-
 
-all: pine64-pinephone.img.xz pine64-pinetab.img.xz purism-librem5.tar.xz boot-xiaomi-beryllium-tianma.img boot-xiaomi-beryllium-ebbg.img boot-oneplus-enchilada.img boot-oneplus-fajita.img
+all: boot-amazon-otter.img pine64-pinephone.img.xz pine64-pinetab.img.xz purism-librem5.tar.xz boot-xiaomi-beryllium-tianma.img boot-xiaomi-beryllium-ebbg.img boot-oneplus-enchilada.img boot-oneplus-fajita.img
 
 
 pine64-pinephone.img: fat-pine64-pinephone.img u-boot-sunxi-with-spl.bin
@@ -81,6 +81,10 @@ kernel-oneplus-enchilada.gz-dtb: kernel-sdm845.gz dtbs/sdm845/sdm845-oneplus-enc
 kernel-oneplus-fajita.gz-dtb: kernel-sdm845.gz dtbs/sdm845/sdm845-oneplus-fajita.dtb
 	cat kernel-sdm845.gz dtbs/sdm845/sdm845-oneplus-fajita.dtb > $@
 
+kernel-amazon-otter.gz-dtb: kernel-omap4.gz dtbs/omap4-kc1.dtb
+	echo "This did not work for me..."
+	cat kernel-omap4.gz dtbs/omap4-kc1.dtb > $@
+
 boot-%.img: initramfs-%.gz kernel-%.gz-dtb
 	rm -f $@
 	$(eval BASE := $(shell cat src/deviceinfo_$* | grep base | cut -d "\"" -f 2))
@@ -89,7 +93,7 @@ boot-%.img: initramfs-%.gz kernel-%.gz-dtb
 	$(eval RAMDISK := $(shell cat src/deviceinfo_$* | grep ramdisk | cut -d "\"" -f 2))
 	$(eval TAGS := $(shell cat src/deviceinfo_$* | grep tags | cut -d "\"" -f 2))
 	$(eval PAGESIZE := $(shell cat src/deviceinfo_$* | grep pagesize | cut -d "\"" -f 2))
-	mkbootimg --kernel kernel-$*.gz-dtb --ramdisk initramfs-$*.gz --base $(BASE) --second_offset $(SECOND) --kernel_offset $(KERNEL) --ramdisk_offset $(RAMDISK) --tags_offset $(TAGS) --pagesize $(PAGESIZE) --cmdline console=ttyMSM0,115200 -o $@
+	mkbootimg --kernel kernel-omap4.gz --dt dtbs/omap4-kc1.dtb --ramdisk initramfs-$*.gz --base $(BASE) --second_offset $(SECOND) --kernel_offset $(KERNEL) --ramdisk_offset $(RAMDISK) --tags_offset $(TAGS) --pagesize $(PAGESIZE) --cmdline "console=ttyO2,115200" -o $@
 
 %.img.xz: %.img
 	@echo "XZ    $@"
@@ -99,7 +103,7 @@ initramfs/bin/busybox: src/busybox src/busybox_config
 	@echo "MAKE  $@"
 	@mkdir -p build/busybox
 	@cp src/busybox_config build/busybox/.config
-	@$(MAKE) -C src/busybox O=../../build/busybox $(ARM64_CROSS_FLAGS)
+	@$(MAKE) -C src/busybox O=../../build/busybox $(ARM_CROSS_FLAGS)
 	@cp build/busybox/busybox initramfs/bin/busybox
 	
 splash/%.ppm.gz: splash/%.ppm
@@ -166,6 +170,16 @@ kernel-sdm845.gz: src/linux-sdm845
 	@cp build/linux-sdm845/arch/arm64/boot/Image.gz $@
 	@cp build/linux-sdm845/arch/arm64/boot/dts/qcom/sdm845-{xiaomi-beryllium-*,oneplus-enchilada,oneplus-fajita}.dtb dtbs/sdm845/
 
+kernel-omap4.gz: src/linux-omap4
+	@echo "MAKE  $@"
+	@mkdir -p build/linux-omap4
+	@mkdir -p dtbs/
+	@cp src/linux_config_kc1 build/linux-omap4/.config
+	@printf "CONFIG_USB_ETH=n" >> build/linux-omap4/.config
+	@$(MAKE) -C src/linux-omap4 O=../../build/linux-omap4 $(ARM_CROSS_FLAGS)
+	@cp build/linux-omap4/arch/arm/boot/zImage $@
+	@cp build/linux-omap4/arch/arm/boot/dts/omap4-kc1.dtb dtbs/
+
 dtbs/sdm845/sdm845-xiaomi-beryllium-ebbg.dtb: kernel-sdm845.gz
 
 dtbs/sdm845/sdm845-xiaomi-beryllium-tianma.dtb: kernel-sdm845.gz
@@ -173,6 +187,8 @@ dtbs/sdm845/sdm845-xiaomi-beryllium-tianma.dtb: kernel-sdm845.gz
 dtbs/sdm845/sdm845-oneplus-enchilada.dtb: kernel-sdm845.gz
 
 dtbs/sdm845/sdm845-oneplus-fajita.dtb: kernel-sdm845.gz
+
+dtbs/omap4-kc1.dtb: kernel-omap4.gz
 
 %.scr: src/%.txt
 	@echo "MKIMG $@"
@@ -233,6 +249,16 @@ src/linux-sdm845:
 	@mkdir src/linux-sdm845
 	@wget -c https://gitlab.com/sdm845-mainline/linux/-/archive/b7a1e57f78d690d02aff902114bf2f6ca978ecfe/linux-b7a1e57f78d690d02aff902114bf2f6ca978ecfe.tar.gz
 	@tar -xf linux-b7a1e57f78d690d02aff902114bf2f6ca978ecfe.tar.gz --strip-components 1 -C src/linux-sdm845
+
+src/linux-omap4:
+	@echo "GET linux-omap4"
+	@mkdir -p src/linux-omap4
+	@git clone --depth=1 -b v5.11 git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git src/linux-omap4
+	@cd src/linux-omap4 && patch -p1 < ../0001-Update-device-tree-for-omap4-kc1.patch
+	@cd src/linux-omap4 && patch -p1 < ../0002-Input-ili210x-Fix-ili210x-touchdata-coordinates-endianness.patch
+	@cd src/linux-omap4 && patch -p1 < ../0003-Input-ili210x-add-missing-negation-for-touch-indicat.patch
+	@cd src/linux-omap4 && patch -p1 < ../0005-HACK-ili210x-Reduce-poll-period-to-1.patch
+	@cd src/linux-omap4 && patch -p1 < ../0006-Add-clk32kg-to-twl6030.patch
 
 src/arm-trusted-firmware:
 	@echo "WGET  arm-trusted-firmware"

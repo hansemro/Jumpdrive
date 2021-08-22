@@ -1,0 +1,16 @@
+setenv kernel_addr_z 0x80008000
+setenv ramdisk_addr_r 0x82000000
+setenv devnum ${mmcdev}
+
+setenv bootargs loglevel=0 silent console=ttyO console=ttyO2 vt.global_cursor_default=0
+
+if load mmc1 ${devnum}:${bootpart} ${kernel_addr_z} /Image.gz; then
+  unzip ${kernel_addr_z} ${kernel_addr_r}
+  if load mmc1 ${devnum}:${bootpart} ${fdtaddr} /omap4-kc1.dtb; then
+    if load mmc1 ${devnum}:${bootpart} ${ramdisk_addr_r} /initramfs.gz; then
+      bootz ${kernel_addr_r} ${ramdisk_addr_r} ${fdtaddr};
+    else
+      bootz ${kernel_addr_r} - ${fdtaddr};
+    fi;
+  fi;
+fi

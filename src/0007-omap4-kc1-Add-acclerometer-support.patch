@@ -1,0 +1,33 @@
+From fe20a576122ff35aefec36cc120535060f795587 Mon Sep 17 00:00:00 2001
+From: Hansem Ro <hansemro@outlook.com>
+Date: Thu, 27 May 2021 06:46:24 -0700
+Subject: [PATCH] omap4-kc1: Add acclerometer support
+
+Enable CONFIG_BMA180 to use accelerometer (Bosch BMA250).
+
+Signed-off-by: Hansem Ro <hansemro@outlook.com>
+---
+ arch/arm/boot/dts/omap4-kc1.dts | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm/boot/dts/omap4-kc1.dts b/arch/arm/boot/dts/omap4-kc1.dts
+index 7d57f72aba6b..74249ccc54dc 100644
+--- a/arch/arm/boot/dts/omap4-kc1.dts
++++ b/arch/arm/boot/dts/omap4-kc1.dts
+@@ -178,6 +178,13 @@ &i2c4 {
+ 
+ 	clock-frequency = <400000>;
+ 
++	accelerometer@18 {
++		compatible = "bosch,bma250";
++		reg = <0x18>;
++		vdd-supply = <&vaux2>;
++		vddio-supply = <&vaux2>;
++	};
++
+ 	tmp@48 {
+ 		compatible = "ti,tmp105";
+ 		reg = <0x48>;
+-- 
+2.31.1
+
